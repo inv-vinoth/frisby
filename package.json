@@ -1,7 +1,6 @@
 {
   "name": "rest_api_tester",
   "author": "Vinothbabu",
-  "main": "rest_service_spec.js",
   "version": "0.0.1",
   "dependencies": {
     "frisby": "latest",

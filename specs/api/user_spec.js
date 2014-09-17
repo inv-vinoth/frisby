@@ -6,7 +6,7 @@ var endpoints = require('../config/endpoints');
 //variables
 var chance = new Chance();
 var name = chance.first();
-var email = chance.email({domain: "invicara.com"})
+var email = chance.email({domain: "test.com"})
 
 console.log(process.env.XS_IP_ADDR);
 
