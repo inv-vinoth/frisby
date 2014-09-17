@@ -1,14 +1,18 @@
 var frisby = require('frisby');
 var Chance = require('chance');
-var config = require('../config/configuration.js');
+var config = require('../config/configuration');
+var endpoints = require('../config/endpoints');
 
+//variables
 var chance = new Chance();
-
 var name = chance.first();
 var email = chance.email({domain: "invicara.com"})
 
+console.log(process.env.XS_IP_ADDR);
+
+// User Specs
 frisby.create('API : Create User')
-    .post(config.xospassport_server + ":" + config.xospassport_port + "/" + config.users, {
+    .post(config.xospassport.IP_ADDR + ":" + config.xospassport.PORT + "/" + endpoints.user.users, {
         email: email,
         name: name,
         password: "123",
@@ -53,7 +57,7 @@ frisby.create('API : Create User')
         expect(json.memberships).toBeDefined();
         
         frisby.create('API: Authentication')
-            .post(config.xospassport_server + ":" + config.xospassport_port + "/" + config.user_signin, {
+            .post(config.xospassport.IP_ADDR + ":" + config.xospassport.PORT + "/" + endpoints.user.signin, {
                 "email": json.email, 
                 "password": json.password
             },
