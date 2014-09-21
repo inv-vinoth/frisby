@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites>
+<testsuite name="Frisby Test: API : Create Account" errors="0" tests="1" failures="0" time="1.197" timestamp="2014-09-21T19:04:44">
+  <testcase classname="Frisby Test: API : Create Account" name="
+	[ POST http://54.213.208.11:8080/xospassport/api/accounts ]" time="1.194"></testcase>
+</testsuite>
+</testsuites>

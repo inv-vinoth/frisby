@@ -6,68 +6,91 @@ var endpoints = require('../config/endpoints');
 //variables
 var chance = new Chance();
 var name = chance.first();
-var email = chance.email({domain: "test.com"})
+var email = chance.email({
+    domain: "test.com"
+})
+var baseHost = config.xospassport.IP_ADDR + ":" + config.xospassport.PORT + '/';
 
-console.log(process.env.XS_IP_ADDR);
+frisby.globalSetup({
+    request: {
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'          
+        }
+    }
+})
 
 // User Specs
-frisby.create('API : Create User')
-    .post(config.xospassport.IP_ADDR + ":" + config.xospassport.PORT + "/" + endpoints.user.users, {
-        email: email,
-        name: name,
-        password: "123",
-        confirmpassword: "123",
-        isAdmin: "true"
-    }, {
-        json: true
-    })    
-    .expectHeader('Content-Type', 'application/json')
-    .expectStatus(200)
-    .expectJSON({
-        "@type": "userResource",
-        "email": email,
-        "name": name,
-    })
-    .expectJSONTypes({
-        "@type": String,
-        "createdAt": String,
-        "createdBy": Number,
-        "updatedAt": String,
-        "updatedBy": Number,
-        "email": String,
-        "name": String,
-        "password": String,
-        "confirmpassword": String,
-        "id": Number,
-        "accountid": Number,
-        "resetpw": Boolean,
-        "memberships": Array
-    })
-    .afterJSON(function(json) {        
-        expect(json.createdAt).toBeDefined();
-        expect(json.createdBy).toBeDefined();
-        expect(json.updatedAt).toBeDefined();
-        expect(json.updatedBy).toBeDefined();
-        expect(json.email).toBeDefined();
-        expect(json.password).toBeDefined();
-        expect(json.confirmpassword).toBeDefined();
-        expect(json.id).toBeDefined();
-        expect(json.accountid).toBeDefined();
-        expect(json.resetpw).toBeDefined();
-        expect(json.memberships).toBeDefined();
-        
-        frisby.create('API: Authentication')
-            .post(config.xospassport.IP_ADDR + ":" + config.xospassport.PORT + "/" + endpoints.user.signin, {
-                "email": json.email, 
-                "password": json.password
-            },
-            { json: true },
-            { headers: { 'Content-Type': 'application/json' }}
-        )
+describe("/Users Endpoint Test Suite", function() {
+    frisby.create('API : Create User')
+        .post(baseHost + endpoints.user.users, {
+            email: email,
+            name: name,
+            password: "123",
+            confirmpassword: "123",
+            isAdmin: "true"
+        }, {
+            json: true
+        })
+        .expectHeader('Content-Type', 'application/json')
         .expectStatus(200)
-          .expectHeader('Content-Type', 'application/json')
-          .expectJSONTypes({
-            "token": String
-          })
-    })
-.toss();
+        .expectJSON({
+            "@type": "userResource",
+            "email": email,
+            "name": name,
+        })
+        .expectJSONTypes({
+            "@type": String,
+            "createdAt": String,
+            "createdBy": Number,
+            "updatedAt": String,
+            "updatedBy": Number,
+            "email": String,
+            "name": String,
+            "password": String,
+            "confirmpassword": String,
+            "id": Number,
+            "accountid": Number,
+            "resetpw": Boolean,
+            "memberships": Array
+        })
+        .afterJSON(function(json) {
+            // Authentication Spec
+            frisby.create('API: Authentication')
+                .post(baseHost + endpoints.user.signin, {
+                    "email": json.email,
+                    "password": "123"
+                }, {
+                    json: true
+                })
+                .expectStatus(200)
+                .expectHeader('Content-Type', 'application/json')
+                .expectJSONTypes({
+                    "token": String
+                })
+                .afterJSON(function(json) {
+                    // User Profile
+                    frisby.create('API: User Profile')
+                        .addHeaders({'Authorization': "Bearer " + json.token })
+                        .get(baseHost + endpoints.user.profile)
+                        .expectStatus(200)
+                        .expectHeader('Content-Type', 'application/json')
+                        .expectJSON({
+                            "accountType": "",
+                            "email": email,
+                            "name": name,
+                        })
+                        .expectJSONTypes({
+                            "accountType": String,
+                            "email": String,
+                            "name": String,
+                            "accountid": Number,
+                            "userid": Number,
+                            "isAdmin": Boolean,
+                        })
+                        .toss();
+                })
+                .toss()
+        })
+        .toss();    
+});
