@@ -22,6 +22,7 @@ frisby.globalSetup({
 
 // User Specs
 describe("/Users Endpoint Test Suite", function() {
+    it("should create user, authenticate, get profile", function(){
     frisby.create('API : Create User')
         .post(baseHost + endpoints.user.users, {
             email: email,
@@ -92,5 +93,6 @@ describe("/Users Endpoint Test Suite", function() {
                 })
                 .toss()
         })
-        .toss();    
+        .toss();
+    });    
 });
