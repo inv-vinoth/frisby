@@ -9,13 +9,13 @@ var chance = new Chance();
 // Admin users
 var admin_name = chance.first();
 var admin_email = chance.email({
-    domain: "test.com"
+    domain: "admin.com"
 });
 
 // Non Admin users
 var name = chance.first();
 var email = chance.email({
-    domain: "test.com"
+    domain: "non-admin.com"
 });
 
 // Account details
@@ -25,6 +25,12 @@ var account_name = chance.string({
 var description = chance.string({
     length: 20
 });
+
+// Account Invites
+var invites = chance.email({
+    domain: "invites.com"
+})
+
 var baseHost = config.xospassport.IP_ADDR + ":" + config.xospassport.PORT + '/';
 
 frisby.globalSetup({
@@ -37,7 +43,7 @@ frisby.globalSetup({
 })
 
 describe("/Accounts Endpoint Test Suite", function() {
-    
+
     describe("/Accounts Preconditions", function() {
 
         it('should create admin user', function() {
@@ -70,11 +76,11 @@ describe("/Accounts Endpoint Test Suite", function() {
                 .expectHeader('Content-Type', 'application/json')
                 .expectStatus(200)
                 .toss();
-           })
         })
-    
+    })
+
     describe("/Accounts Endpoints", function() {
-        
+
         it('should create Account with admin user', function() {
             frisby.create('API : Create Account with admin user')
                 .post(baseHost + endpoints.account.accounts, {
@@ -171,14 +177,14 @@ describe("/Accounts Endpoint Test Suite", function() {
                         .get(baseHost + endpoints.account.accounts)
                         .expectStatus(200)
                         .expectHeader('Content-Type', 'application/json')
-                        .expectJSON('?',{
+                        .expectJSON('?', {
                             "@type": "accountResource",
                             "name": account_name,
                             "description": description,
                             "type": "",
                             "disabled": false
                         })
-                        .expectJSONTypes('?',{
+                        .expectJSONTypes('?', {
                             "@type": String,
                             "createdAt": String,
                             "createdBy": Number,
@@ -194,7 +200,7 @@ describe("/Accounts Endpoint Test Suite", function() {
                 })
                 .toss()
         });
-        
+
         it('should signin in account', function() {
             frisby.create('API : Create Account with admin user')
                 .post(baseHost + endpoints.account.accounts, {
@@ -229,36 +235,214 @@ describe("/Accounts Endpoint Test Suite", function() {
                     "type": String,
                     "disabled": Boolean
                 })
-                .afterJSON(function(json){
-                   var account_id = json.accountid;    
-                   frisby.create('API: Authentication')
-                    .post(baseHost + endpoints.user.signin, {
-                        "email": admin_email,
-                        "password": "123"
-                    }, {
-                        json: true
-                    })
-                    .expectStatus(200)
-                    .expectHeader('Content-Type', 'application/json')
-                    .expectJSONTypes({
-                        "token": String
-                    })                                                 
-                .afterJSON(function(json){
-                    frisby.create('Account signin')
-                        .addHeaders({
-                            'Authorization': "Bearer " + json.token
+                .afterJSON(function(json) {
+                    var account_id = json.accountid;
+                    frisby.create('API: Authentication')
+                        .post(baseHost + endpoints.user.signin, {
+                            "email": admin_email,
+                            "password": "123"
+                        }, {
+                            json: true
                         })
-                        .post(baseHost + endpoints.account.accounts + "/" + account_id + "/" + "signin")
                         .expectStatus(200)
                         .expectHeader('Content-Type', 'application/json')
                         .expectJSONTypes({
                             "token": String
-                        }) 
-                        .toss();
-                 })
-                 .toss()    
-             })
-            .toss()
+                        })
+                        .afterJSON(function(json) {
+                            frisby.create('Account signin')
+                                .addHeaders({
+                                    'Authorization': "Bearer " + json.token
+                                })
+                                .post(baseHost + endpoints.account.accounts + "/" + account_id + "/" + "signin")
+                                .expectStatus(200)
+                                .expectHeader('Content-Type', 'application/json')
+                                .expectJSONTypes({
+                                    "token": String
+                                })
+                                .toss();
+                        })
+                        .toss()
+                })
+                .toss()
+        });
+
+        it('should invite user to a account', function() {
+            frisby.create('API : Create Account with admin user')
+                .post(baseHost + endpoints.account.accounts, {
+                    "account": {
+                        "name": account_name,
+                        "description": description
+                    },
+                    "user": {
+                        "email": admin_email,
+                    }
+                }, {
+                    json: true
+                })
+                .expectHeader('Content-Type', 'application/json')
+                .expectStatus(200)
+                .expectJSON({
+                    "@type": "accountResource",
+                    "name": account_name,
+                    "description": description,
+                    "type": "",
+                    "disabled": false
+                })
+                .expectJSONTypes({
+                    "@type": String,
+                    "createdAt": String,
+                    "createdBy": Number,
+                    "updatedAt": String,
+                    "updatedBy": Number,
+                    "accountid": Number,
+                    "name": String,
+                    "description": String,
+                    "type": String,
+                    "disabled": Boolean
+                })
+                .afterJSON(function(json) {
+                    var account_id = json.accountid;
+                    frisby.create('API: Authentication')
+                        .post(baseHost + endpoints.user.signin, {
+                            "email": admin_email,
+                            "password": "123"
+                        }, {
+                            json: true
+                        })
+                        .expectStatus(200)
+                        .expectHeader('Content-Type', 'application/json')
+                        .expectJSONTypes({
+                            "token": String
+                        })
+                        .afterJSON(function(json) {
+                            frisby.create('Account signin')
+                                .addHeaders({
+                                    'Authorization': "Bearer " + json.token
+                                })
+                                .post(baseHost + endpoints.account.accounts + "/" + account_id + "/" + "signin")
+                                .expectStatus(200)
+                                .expectHeader('Content-Type', 'application/json')
+                                .expectJSONTypes({
+                                    "token": String
+                                })
+                                .afterJSON(function(json) {
+                                    frisby.create('Account invite')
+                                        .addHeaders({
+                                            'Authorization': "Bearer " + json.token
+                                        })
+                                        .post(baseHost + endpoints.account.invites, {
+                                            "emails": [invites]
+                                        }, {
+                                            json: true
+                                        })
+                                        .expectStatus(200)
+                                        .expectHeader('Content-Type', 'application/json')
+                                        .expectJSON({
+                                            "code": 1,
+                                            "message": "Success",
+                                        })
+                                        .expectJSONTypes({
+                                            "code": Number,
+                                            "message": String,
+                                            "suppressed": Array
+                                        })
+                                        .toss()
+                                })
+                                .toss()
+                        })
+                        .toss()
+                })
+                .toss()
+        });
+        it('should get invites for user', function() {
+            frisby.create('API : Create Account with admin user')
+                .post(baseHost + endpoints.account.accounts, {
+                    "account": {
+                        "name": account_name,
+                        "description": description
+                    },
+                    "user": {
+                        "email": admin_email,
+                    }
+                }, {
+                    json: true
+                })
+                .expectHeader('Content-Type', 'application/json')
+                .expectStatus(200)
+                .expectJSON({
+                    "@type": "accountResource",
+                    "name": account_name,
+                    "description": description,
+                    "type": "",
+                    "disabled": false
+                })
+                .expectJSONTypes({
+                    "@type": String,
+                    "createdAt": String,
+                    "createdBy": Number,
+                    "updatedAt": String,
+                    "updatedBy": Number,
+                    "accountid": Number,
+                    "name": String,
+                    "description": String,
+                    "type": String,
+                    "disabled": Boolean
+                })
+                .afterJSON(function(json) {
+                    var account_id = json.accountid;
+                    frisby.create('API: Authentication')
+                        .post(baseHost + endpoints.user.signin, {
+                            "email": admin_email,
+                            "password": "123"
+                        }, {
+                            json: true
+                        })
+                        .expectStatus(200)
+                        .expectHeader('Content-Type', 'application/json')
+                        .expectJSONTypes({
+                            "token": String
+                        })
+                        .afterJSON(function(json) {
+                            frisby.create('Account signin')
+                                .addHeaders({
+                                    'Authorization': "Bearer " + json.token
+                                })
+                                .post(baseHost + endpoints.account.accounts + "/" + account_id + "/" + "signin")
+                                .expectStatus(200)
+                                .expectHeader('Content-Type', 'application/json')
+                                .expectJSONTypes({
+                                    "token": String
+                                })
+                                .afterJSON(function(json) {
+                                    frisby.create('Get Account invite')
+                                        .addHeaders({
+                                            'Authorization': "Bearer " + json.token
+                                        })
+                                        .get(baseHost + endpoints.account.invites)
+                                        .inspectJSON()
+                                        .expectStatus(200)
+                                        .expectHeader('Content-Type', 'application/json')
+                                        .expectJSON('*', {
+                                            "@type": "invitationResource",
+                                            "email": admin_email,
+                                        })
+                                        .expectJSONTypes('*', {
+                                            "@type": String,
+                                            "createdAt": String,
+                                            "createdBy": Number,
+                                            "updatedAt": String,
+                                            "updatedBy": Number,
+                                            "email": String,
+                                            "invitationCode": String
+                                        })
+                                        .toss()
+                                })
+                                .toss()
+                        })
+                        .toss()
+                })
+                .toss()
         });
     });
 });
